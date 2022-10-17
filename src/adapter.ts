@@ -73,29 +73,47 @@ export async function importData(from: Date, to: Date) {
     });
 
     const treatments = [
-        ...basal.map((b) => ({
+        ...basal.map((basal) => ({
             eventType: "Temp Basal",
             duration: 30,
-            absolute: b.value,
+            absolute: basal.value,
             enteredBy: APP,
-            created_at: new Date(b.created_at).toISOString(),
+            created_at: new Date(basal.created_at),
         })),
-        ...carb.map((b) => ({
+        ...bolus.map((bolus) => {
+            //find combined combined boluses : Bolus type ezcarb
+            const is_combined = bolus.flags.some(f => f.description === "Bolus type ezcarb");
+            let eventType, next;
+            if(is_combined) {
+                // bolus is combined ... find the next carb
+                eventType = "Meal Bolus"
+                let idx = data.indexOf(bolus);
+                next = data[++idx];
+                while(next.type !== "carb") next = data[++idx];
+                //remove the found carb array
+                carb.splice(carb.indexOf(next), 1)
+            } else {
+                eventType = "Correction Bolus"
+            }
+
+            return {
+                eventType,
+                carbs: next?.value,
+                insulin: bolus.total_value,
+                enteredBy: APP,
+                created_at: new Date(bolus.created_at),
+            }
+        }),
+        ...carb.map((carb) => ({
             eventType: "Meal Bolus",
-            carbs: b.value,
+            carbs: carb.value,
             enteredBy: APP,
-            created_at: new Date(b.created_at).toISOString(),
-        })),
-        ...bolus.map((b) => ({
-            eventType: "Correction Bolus",
-            insulin: b.total_value,
-            enteredBy: APP,
-            created_at: new Date(b.created_at).toISOString(),
+            created_at: new Date(carb.created_at),
         })),
     ];
 
     await nightscout.post("/treatments", treatments)
     await nightscout.post("/entries", entries)
 
-    console.log("[adapter] performing import", {from, to})
+    console.log("[adapter] performing import", { from, to })
 }
