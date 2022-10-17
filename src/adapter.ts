@@ -1,5 +1,6 @@
 import * as diasend from "./diasend";
 import axios from "axios";
+import store from "./store"
 
 const nightscout = axios.create({
     baseURL: process.env.NIGHTSCOUT_API,
@@ -8,9 +9,8 @@ const nightscout = axios.create({
     },
 })
 const DAY = 1000 * 60 * 60 * 24;
-const PULL_PERIOD = DAY * 5;
+const PULL_PERIOD = DAY * 30;
 const APP = "camaps-diasend-bridge"
-export let last_value_at = new Date(0);
 
 export async function reliableApiRequest(from: Date, to: Date, allowCache = true): Promise<diasend.DiasendCGMResponse> {
     //Make sure to refresh the token if the first call with cache fails or propagate the error
@@ -27,32 +27,25 @@ async function getYPSO(from: Date, to: Date) {
         .then(list => list.filter(pump => pump.device.model === "KidsAP Pump"))
 }
 
-async function getOldestEntry() {
-    // query the api for a date in the future, to get devices without data
+export async function dateCascadeImport() {
     const future = new Date(Date.now() + DAY * 3)
     const ypso = await getYPSO(future, future);
-    if (ypso.length == 0) throw new Error("[diasend utils] no ypso pump in records ... exit")
-    return new Date(Math.min(...ypso.map(y => new Date(y.device.first_value_at).getTime())));
-}
+    if (ypso.length == 0) 
+        throw new Error("[diasend utils] no ypso pump in records ... exit")
 
-export async function dateCascadeImport() {
-    let end = new Date()
-    let start = await getOldestEntry()
+    let end = ypso.map(y => new Date(y.device.last_value_at)).reduce((a,b) => a > b ? a : b)
+    let start = ypso.map(y => new Date(y.device.first_value_at)).reduce((a,b) => a > b ? b : a)
+
     while (end > start) {
-        let intermediate = new Date(end.getTime() - PULL_PERIOD)
-        if (intermediate < start) intermediate = start
-        await importData(intermediate, end);
-        end = intermediate;
+        let intermediate = new Date(start.getTime() + PULL_PERIOD)
+        if (intermediate > end) intermediate = end
+        await importData(start, intermediate);
+        start = intermediate;
     }
 }
 
 export async function importData(from: Date, to: Date) {
     const ypso = await getYPSO(from, to)
-    ypso.forEach(y => {
-        const lva = new Date(y.device.last_value_at);
-        if (lva > last_value_at) last_value_at = lva
-    })
-
     const data = ypso.map(y => y.data).flat()
 
     const carb = data.filter(d => d.type === "carb") as diasend.CarbRecord[]
@@ -84,12 +77,12 @@ export async function importData(from: Date, to: Date) {
             //find combined combined boluses : Bolus type ezcarb
             const is_combined = bolus.flags.some(f => f.description === "Bolus type ezcarb");
             let eventType, next;
-            if(is_combined) {
+            if (is_combined) {
                 // bolus is combined ... find the next carb
                 eventType = "Meal Bolus"
                 let idx = data.indexOf(bolus);
                 next = data[++idx];
-                while(next.type !== "carb") next = data[++idx];
+                while (next.type !== "carb") next = data[++idx];
                 //remove the found carb array
                 carb.splice(carb.indexOf(next), 1)
             } else {
@@ -114,6 +107,11 @@ export async function importData(from: Date, to: Date) {
 
     await nightscout.post("/treatments", treatments)
     await nightscout.post("/entries", entries)
+
+    ypso.forEach(y => {
+        const lva = new Date(y.device.last_value_at).getTime;
+        if (lva > store.last_value_at) store.last_value_at = lva
+    })
 
     console.log("[adapter] performing import", { from, to })
 }
