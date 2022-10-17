@@ -33,8 +33,10 @@ export async function dateCascadeImport() {
     if (ypso.length == 0) 
         throw new Error("[diasend utils] no ypso pump in records ... exit")
 
-    let end = ypso.map(y => new Date(y.device.last_value_at)).reduce((a,b) => a > b ? a : b)
     let start = ypso.map(y => new Date(y.device.first_value_at)).reduce((a,b) => a > b ? b : a)
+    let end = ypso.map(y => new Date(y.device.last_value_at)).reduce((a,b) => a > b ? a : b)
+
+    if(store.last_value_at > start.getTime()) start = new Date(store.last_value_at);
 
     while (end > start) {
         let intermediate = new Date(start.getTime() + PULL_PERIOD)
