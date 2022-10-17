@@ -109,7 +109,7 @@ export async function importData(from: Date, to: Date) {
     await nightscout.post("/entries", entries)
 
     ypso.forEach(y => {
-        const lva = new Date(y.device.last_value_at).getTime;
+        const lva = new Date(y.device.last_value_at).getTime();
         if (lva > store.last_value_at) store.last_value_at = lva
     })
 

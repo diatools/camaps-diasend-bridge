@@ -11,6 +11,7 @@ const init = fs.existsSync(PATH)
 const store = new Proxy(init, {
     set: (target, prop, value) => {
         target[prop] = value;
+        console.log("[store] update")
         fs.writeFileSync(PATH, JSON.stringify(target), {encoding: "utf-8", flag: "wx"})
         return true;
     },
