@@ -115,5 +115,8 @@ export async function importData(from?: Date, to?: Date) {
             store.last_value_at = t.created_at.getTime()
     })
 
-    console.log("[adapter] performing import", { from, to })
+    if(from)
+        console.log("[adapter] performing import", { from, to })
+    else
+        console.log("[adapter] performing update ...", new Date())
 }
