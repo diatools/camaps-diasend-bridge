@@ -7,7 +7,7 @@ console.log(process.env.TZ);
 (async () => {
     await adapter.dateCascadeImport()
     setInterval(
-        () => adapter.importData(new Date(store.last_value_at), new Date()),
+        () => adapter.importData(),
         PULL_INTERVALL
     )
 })()

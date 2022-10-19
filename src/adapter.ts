@@ -74,7 +74,7 @@ export async function importData(from?: Date, to?: Date) {
             absolute: basal.value,
             enteredBy: APP,
             created_at: new Date(basal.created_at),
-        })),
+        })).filter(t => t.created_at.getTime() > store.last_value_at),
         ...bolus.map((bolus) => {
             //find combined combined boluses : Bolus type ezcarb
             const is_combined = bolus.flags.some(f => f.description === "Bolus type ezcarb");
