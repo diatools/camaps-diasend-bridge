@@ -2,7 +2,7 @@ import * as diasend from "./diasend";
 import axios from "axios";
 import store from "./store"
 
-const nightscout = axios.create({
+export const nightscout = axios.create({
     baseURL: process.env.NIGHTSCOUT_API,
     params: {
         token: process.env.NIGHTSCOUT_TOKEN,
@@ -12,7 +12,7 @@ const DAY = 1000 * 60 * 60 * 24;
 const PULL_PERIOD = DAY * 30;
 const APP = "camaps-diasend-bridge"
 
-export async function reliableApiRequest(from: Date, to: Date, allowCache = true): Promise<diasend.DiasendCGMResponse> {
+export async function reliableApiRequest(from?: Date, to?: Date, allowCache = true): Promise<diasend.DiasendCGMResponse> {
     //Make sure to refresh the token if the first call with cache fails or propagate the error
     return diasend.obtainDiasendAccessToken(allowCache)
         .then(token => diasend.getPatientData(token.access_token, from, to))
@@ -22,7 +22,7 @@ export async function reliableApiRequest(from: Date, to: Date, allowCache = true
         })
 }
 
-async function getYPSO(from: Date, to: Date) {
+async function getYPSO(from?: Date, to?: Date) {
     return reliableApiRequest(from, to)
         .then(list => list.filter(pump => pump.device.model === "KidsAP Pump"))
 }
@@ -46,7 +46,7 @@ export async function dateCascadeImport() {
     }
 }
 
-export async function importData(from: Date, to: Date) {
+export async function importData(from?: Date, to?: Date) {
     const ypso = await getYPSO(from, to)
     const data = ypso.map(y => y.data).flat()
 
@@ -110,9 +110,9 @@ export async function importData(from: Date, to: Date) {
     await nightscout.post("/treatments", treatments)
     await nightscout.post("/entries", entries)
 
-    ypso.forEach(y => {
-        const lva = new Date(y.device.last_value_at).getTime();
-        if (lva > store.last_value_at) store.last_value_at = lva
+    treatments.forEach(t => {
+        if(t.created_at.getTime() > store.last_value_at)
+            store.last_value_at = t.created_at.getTime()
     })
 
     console.log("[adapter] performing import", { from, to })

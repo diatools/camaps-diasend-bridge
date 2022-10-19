@@ -148,16 +148,16 @@ export type DiasendCGMResponse = { data: PatientRecord[]; device: DeviceData }[]
 
 export async function getPatientData(
   accessToken: string,
-  date_from: Date,
-  date_to: Date
-): Promise<DiasendCGMResponse>{
+  date_from?: Date,
+  date_to?: Date
+): Promise<DiasendCGMResponse> {
   const response = await diasendClient.get<DiasendCGMResponse>(
     "/patient/data",
     {
       params: {
         type: "cgm",
-        date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
-        date_to: dayjs(date_to).format(diasendIsoFormatWithoutTZ),
+        date_from: date_from ? dayjs(date_from).format(diasendIsoFormatWithoutTZ) : undefined,
+        date_to: date_to ? dayjs(date_to).format(diasendIsoFormatWithoutTZ) : undefined,
         unit: "mg_dl",
       },
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -216,6 +216,7 @@ export interface PumpSettings {
   basalProfile: [string, number][];
   insulinCarbRatioProfile: [string, number][];
   insulinSensitivityProfile: [string, number][];
+  autoModeTargetProfile: [string, number][];
   bloodGlucoseTargetLow: number;
   bloodGlucoseTargetHigh: number;
   insulinOnBoardDurationHours: number;
@@ -230,6 +231,11 @@ export async function getPumpSettings(
     `/reports/${userId}/insulin/pump-settings`
   );
   const $ = load(data);
+
+  console.log("###################################################")
+  const t = $("#device_setting_group_id")
+  console.log(t.children().map((_, e) => console.log(e.attribs['value'])))
+  console.log("****************************************")
 
   // find the active basal profile
   const activeBasalProfile = $("td")
@@ -291,6 +297,24 @@ export async function getPumpSettings(
       .get() as unknown as [string, string][]
   ).map(([startTime, rate]) => [startTime, parseFloat(rate)]);
 
+  // identify the autoModeTargetProfile
+  const autoModeTargetProfile: [string, number][] = (
+    $("h3")
+      .filter((_, e) => $(e).text() === "Auto Mode Glucose Target")
+      .next("table")
+      .find("table")
+      .find("tr:not(:first)")
+      .map((_, row) =>
+        $(row)
+          // get all cells of a row
+          .children("td")
+          // take only the last two cells (start time and rate)
+          .slice(-2)
+          .map((_, cell) => $(cell).text())
+      )
+      .get() as unknown as [string, string][]
+  ).map(([startTime, rate]) => [startTime, parseFloat(rate)]);
+
   // lower goal of blood glucose
   const bloodGlucoseTargetLowElement = $("td")
     .filter((_, ele) => $(ele).text() === "BG goal low")
@@ -327,6 +351,7 @@ export async function getPumpSettings(
     basalProfile,
     insulinCarbRatioProfile,
     insulinSensitivityProfile,
+    autoModeTargetProfile,
     bloodGlucoseTargetLow,
     bloodGlucoseTargetHigh,
     insulinOnBoardDurationHours: iobDurationHours,
