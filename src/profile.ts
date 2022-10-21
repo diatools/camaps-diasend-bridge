@@ -77,8 +77,9 @@ export const profileImport = () => getAuthenticatedScrapingClient()
                 const profile = createProfile(settings, group.startDate)
 
                 nightscout.put("/profile", profile)
+                console.log("[profile] imported ...", group)
             } catch {
-                console.log("ERROR", group)
+                console.log("[profile] ERROR ...", group)
             }
         });
     })

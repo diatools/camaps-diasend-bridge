@@ -327,8 +327,6 @@ export async function getPumpSettings(
     bloodGlucoseTargetLowElement.split(" ")[0]
   );
 
-  console.log(startDate, bloodGlucoseTargetLowElement);
-
   const units =
     bloodGlucoseTargetLowElement.split(" ")[1].toLowerCase() === "mg/dl"
       ? "mg/dl"
