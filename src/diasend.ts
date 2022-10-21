@@ -236,7 +236,13 @@ export async function getPumpSettings(
     stringify({
       device_id,
       device_setting_group_id, 
-    })
+    }), {
+      params: {
+        period: "arbitrary",
+        starttime: "2021-01-01",
+        endtime: new Date().toISOString().substring(0,10),
+      }
+    }
   );
   const $ = load(data);
 

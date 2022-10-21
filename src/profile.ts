@@ -17,6 +17,13 @@ export async function listPumpSettings(
 ) {
     const { data } = await client.get<string>(
         `/reports/${userId}/insulin/pump-settings`,
+        {
+            params: {
+                period: "arbitrary",
+                starttime: "2021-01-01",
+                endtime: new Date().toISOString().substring(0, 10),
+            }
+        }
     );
 
     const $ = load(data);
@@ -73,7 +80,7 @@ export const profileImport = () => getAuthenticatedScrapingClient()
         const profiles = await listPumpSettings(client, userId);
 
         profiles.group_id.map(group => async () => {
-            if(store.last_profile_at >= group.startDate.getTime()) return
+            if (store.last_profile_at >= group.startDate.getTime()) return
             else store.last_profile_at = group.startDate.getTime();
 
             try {
