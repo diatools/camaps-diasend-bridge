@@ -78,7 +78,8 @@ export async function importData(from?: Date, to?: Date) {
         ...bolus.map((bolus) => {
             //find combined combined boluses : Bolus type ezcarb
             const is_combined = bolus.flags.some(f => f.description === "Bolus type ezcarb");
-            let eventType, next;
+            let eventType;
+            let next: diasend.PatientRecord;
             if (is_combined) {
                 // bolus is combined ... find the next carb
                 eventType = "Meal Bolus"
@@ -87,6 +88,11 @@ export async function importData(from?: Date, to?: Date) {
                 while (next.type !== "carb") next = data[++idx];
                 //remove the found carb array
                 carb.splice(carb.indexOf(next), 1)
+                //set the storage time
+                const created_at = new Date(next.created_at)
+                if(store.last_value_at < created_at.getTime())
+                    store.last_value_at = created_at.getTime();
+                
             } else {
                 eventType = "Correction Bolus"
             }
