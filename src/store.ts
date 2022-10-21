@@ -6,6 +6,7 @@ const init = fs.existsSync(PATH)
     ? JSON.parse(fs.readFileSync(PATH, {encoding: "utf-8", flag: "r"}))
     : {
         last_value_at: 0,
+        last_profile_at: 0,
     };
 
 console.log("[store] init ...", init)

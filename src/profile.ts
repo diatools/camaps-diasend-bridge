@@ -2,6 +2,7 @@ import { AxiosInstance } from "axios";
 import { load } from "cheerio";
 import { PumpSettings, getAuthenticatedScrapingClient, getPumpSettings } from "./diasend";
 import { nightscout } from "./adapter";
+import store from "./store";
 
 const toNSProfile = (profile: Array<[time: string, value: number]>) =>
     profile.map(([time, value]) => ({
@@ -71,7 +72,10 @@ export const profileImport = () => getAuthenticatedScrapingClient()
     .then(async ({ client, userId }) => {
         const profiles = await listPumpSettings(client, userId);
 
-        profiles.group_id.forEach(async group => {
+        profiles.group_id.map(group => async () => {
+            if(store.last_profile_at > group.startDate.getTime()) return
+            else store.last_profile_at = group.startDate.getTime();
+            
             try {
                 const settings = await getPumpSettings(group.startDate, client, userId, profiles.device_id as string, group.id as string)
                 const profile = createProfile(settings, group.startDate)
@@ -81,5 +85,5 @@ export const profileImport = () => getAuthenticatedScrapingClient()
             } catch {
                 console.log("[profile] ERROR ...", group)
             }
-        });
+        }).reduce((promise, func) => promise.then(func), Promise.resolve())
     })
