@@ -79,7 +79,7 @@ export async function importData(from?: Date, to?: Date) {
             //find combined combined boluses : Bolus type ezcarb
             const is_combined = bolus.flags.some(f => f.description === "Bolus type ezcarb");
             let eventType;
-            let next: diasend.PatientRecord;
+            let next;
             if (is_combined) {
                 // bolus is combined ... find the next carb
                 eventType = "Meal Bolus"
