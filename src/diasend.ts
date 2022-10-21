@@ -224,18 +224,21 @@ export interface PumpSettings {
 }
 
 export async function getPumpSettings(
+  startDate: Date,
   client: AxiosInstance,
-  userId: string
+  userId: string,
+  device_id: string,
+  device_setting_group_id: string,
+
 ): Promise<PumpSettings> {
-  const { data } = await client.get<string>(
-    `/reports/${userId}/insulin/pump-settings`
+  const { data } = await client.post<string>(
+    `/reports/${userId}/insulin/pump-settings`,
+    stringify({
+      device_id,
+      device_setting_group_id, 
+    })
   );
   const $ = load(data);
-
-  console.log("###################################################")
-  const t = $("#device_setting_group_id")
-  console.log(t.children().map((_, e) => console.log(e.attribs['value'])))
-  console.log("****************************************")
 
   // find the active basal profile
   const activeBasalProfile = $("td")
@@ -323,6 +326,8 @@ export async function getPumpSettings(
   const bloodGlucoseTargetLow = parseInt(
     bloodGlucoseTargetLowElement.split(" ")[0]
   );
+
+  console.log(startDate, bloodGlucoseTargetLowElement);
 
   const units =
     bloodGlucoseTargetLowElement.split(" ")[1].toLowerCase() === "mg/dl"
