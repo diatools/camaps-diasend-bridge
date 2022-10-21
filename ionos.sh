@@ -10,7 +10,7 @@ if test -d "camaps-diasend-bridge"; then
     echo "#########################\n"
 else
     echo "CAMAPS=./camaps-diasend-bridge" >> .env
-    echo "COMPOSE_FILE=docker-compose.yml:./camaps-diasend-bridge" >> .env
+    echo "COMPOSE_FILE=docker-compose.yml:./camaps-diasend-bridge/docker-compose.yml" >> .env
 
     git clone https://github.com/diatools/camaps-diasend-bridge.git camaps-diasend-bridge 
 fi
