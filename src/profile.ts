@@ -73,9 +73,9 @@ export const profileImport = () => getAuthenticatedScrapingClient()
         const profiles = await listPumpSettings(client, userId);
 
         profiles.group_id.map(group => async () => {
-            if(store.last_profile_at > group.startDate.getTime()) return
+            if(store.last_profile_at >= group.startDate.getTime()) return
             else store.last_profile_at = group.startDate.getTime();
-            
+
             try {
                 const settings = await getPumpSettings(group.startDate, client, userId, profiles.device_id as string, group.id as string)
                 const profile = createProfile(settings, group.startDate)
