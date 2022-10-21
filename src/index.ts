@@ -7,7 +7,8 @@ const PULL_INTERVALL_PUMP = 1000 * 60 * 60;
 console.log(process.env.TZ);
 
 (async () => {
-    await adapter.dateCascadeImport()
+    await adapter.dateCascadeImport();
+    await profile.profileImport();
 
     setInterval(
         () => adapter.importData(),
