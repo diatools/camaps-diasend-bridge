@@ -7,6 +7,7 @@ const init = fs.existsSync(PATH)
     : {
         last_treatment_at: 0,
         last_profile_at: 0,
+        last_cgm_at: 0,
     };
 
 console.log("[store] init ...", init)

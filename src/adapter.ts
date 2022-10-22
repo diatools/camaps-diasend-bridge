@@ -36,13 +36,14 @@ export async function dateCascadeImport() {
     let start = ypso.map(y => new Date(y.device.first_value_at)).reduce((a, b) => a > b ? b : a)
     let end = ypso.map(y => new Date(y.device.last_value_at)).reduce((a, b) => a > b ? a : b)
 
-    if (store.last_treatment_at > start.getTime()) start = new Date(store.last_treatment_at);
+    if (store.last_cgm_at > start.getTime()) start = new Date(store.last_cgm_at);
 
     while (end > start) {
         let intermediate = new Date(start.getTime() + PULL_PERIOD)
         if (intermediate > end) intermediate = end
         await importData(start, intermediate);
         start = intermediate;
+        store.last_cgm_at = start.getTime();
     }
 }
 
@@ -106,13 +107,17 @@ export async function importData(from?: Date, to?: Date) {
             enteredBy: APP,
             created_at: new Date(carb.created_at),
         })),
-    ];
+    ].filter(t => {
+        if(!t) return false;
+        if(t.created_at.getTime() < store.last_treatment_at) return false;
+        return true;
+    });
 
     await nightscout.post("/treatments", treatments)
     await nightscout.post("/entries", entries)
 
     treatments.forEach(t => {
-        if(t === undefined) return;
+        if(!t) return;
         if (t.created_at.getTime() > store.last_treatment_at)
             store.last_treatment_at = t.created_at.getTime()
     })
