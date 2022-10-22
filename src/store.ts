@@ -2,10 +2,15 @@ import fs from 'fs';
 
 const PATH = "store.json"
 
-const init = fs.existsSync(PATH)
+interface Store {
+    last_treatment_at: number;
+    last_profile_at: number;
+}
+
+const init: Store = fs.existsSync(PATH)
     ? JSON.parse(fs.readFileSync(PATH, {encoding: "utf-8", flag: "r"}))
     : {
-        last_value_at: 0,
+        last_treatment_at: 0,
         last_profile_at: 0,
     };
 

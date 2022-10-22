@@ -30,13 +30,13 @@ async function getYPSO(from?: Date, to?: Date) {
 export async function dateCascadeImport() {
     const future = new Date(Date.now() + DAY * 3)
     const ypso = await getYPSO(future, future);
-    if (ypso.length == 0) 
+    if (ypso.length == 0)
         throw new Error("[diasend utils] no ypso pump in records ... exit")
 
-    let start = ypso.map(y => new Date(y.device.first_value_at)).reduce((a,b) => a > b ? b : a)
-    let end = ypso.map(y => new Date(y.device.last_value_at)).reduce((a,b) => a > b ? a : b)
+    let start = ypso.map(y => new Date(y.device.first_value_at)).reduce((a, b) => a > b ? b : a)
+    let end = ypso.map(y => new Date(y.device.last_value_at)).reduce((a, b) => a > b ? a : b)
 
-    if(store.last_value_at > start.getTime()) start = new Date(store.last_value_at);
+    if (store.last_treatment_at > start.getTime()) start = new Date(store.last_treatment_at);
 
     while (end > start) {
         let intermediate = new Date(start.getTime() + PULL_PERIOD)
@@ -50,7 +50,7 @@ export async function importData(from?: Date, to?: Date) {
     const ypso = await getYPSO(from, to)
     const data = ypso.map(y => y.data).flat()
 
-    const carb = data.filter(d => d.type === "carb") as diasend.CarbRecord[]
+    const carb = data.filter((d, idx) => d.type === "carb") as diasend.CarbRecord[]
     const cgm = data.filter(d => d.type === "glucose") as diasend.GlucoseRecord[]
     const bolus = data.filter(d => d.type === "insulin_bolus") as diasend.BolusRecord[]
     const basal = data.filter(d => d.type === "insulin_basal") as diasend.BasalRecord[]
@@ -61,7 +61,7 @@ export async function importData(from?: Date, to?: Date) {
         return {
             type,
             [type]: cgm.value,
-            dateString: date.toISOString(),
+            dateString: date,
             date: date.getTime(),
             app: APP,
         }
@@ -74,39 +74,34 @@ export async function importData(from?: Date, to?: Date) {
             absolute: basal.value,
             enteredBy: APP,
             created_at: new Date(basal.created_at),
-        })).filter(t => t.created_at.getTime() > store.last_value_at),
+        })).filter(t => t.created_at.getTime() > store.last_treatment_at),
         ...bolus.map((bolus) => {
-            //find combined combined boluses : Bolus type ezcarb
+            //find combined boluses : Bolus type ezcarb
             const is_combined = bolus.flags.some(f => f.description === "Bolus type ezcarb");
-            let eventType;
-            let next;
             if (is_combined) {
-                // bolus is combined ... find the next carb
-                eventType = "Meal Bolus"
                 let idx = data.indexOf(bolus);
-                next = data[++idx];
-                while (next.type !== "carb") next = data[++idx];
-                //remove the found carb array
-                carb.splice(carb.indexOf(next), 1)
-                //set the storage time
-                const created_at = new Date(next.created_at)
-                if(store.last_value_at < created_at.getTime())
-                    store.last_value_at = created_at.getTime();
-                
-            } else {
-                eventType = "Correction Bolus"
-            }
+                let next = data.slice(idx).findIndex(p => p.type === "carb")
 
-            return {
-                eventType,
-                carbs: next?.value,
+                if (next != -1) {
+                    const combi = data[idx + next] as diasend.CarbRecord;
+                    carb.splice(carb.indexOf(combi), 1)
+                    return {
+                        eventType: "Meal Bolus",
+                        insulin: bolus.total_value,
+                        carbs: combi.value,
+                        enteredBy: APP,
+                        created_at: new Date(combi.created_at),
+                    }
+                } else return;
+            } else return {
+                eventType: "Correction Bolus",
                 insulin: bolus.total_value,
                 enteredBy: APP,
                 created_at: new Date(bolus.created_at),
             }
         }),
         ...carb.map((carb) => ({
-            eventType: "Meal Bolus",
+            eventType: "Carb Correction",
             carbs: carb.value,
             enteredBy: APP,
             created_at: new Date(carb.created_at),
@@ -117,11 +112,12 @@ export async function importData(from?: Date, to?: Date) {
     await nightscout.post("/entries", entries)
 
     treatments.forEach(t => {
-        if(t.created_at.getTime() > store.last_value_at)
-            store.last_value_at = t.created_at.getTime()
+        if(t === undefined) return;
+        if (t.created_at.getTime() > store.last_treatment_at)
+            store.last_treatment_at = t.created_at.getTime()
     })
 
-    if(from)
+    if (from)
         console.log("[adapter] performing import", { from, to })
     else
         console.log("[adapter] performing update ...", new Date())

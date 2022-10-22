@@ -4,6 +4,8 @@ import { PumpSettings, getAuthenticatedScrapingClient, getPumpSettings } from ".
 import { nightscout } from "./adapter";
 import store from "./store";
 
+const APP = "camaps-diasend-bridge"
+
 const toNSProfile = (profile: Array<[time: string, value: number]>) =>
     profile.map(([time, value]) => ({
         time: time.substring(0, 5),
@@ -72,6 +74,7 @@ export function createProfile(
         mills: startDate.getTime(),
         units: settings.units,
         created_at: startDate,
+        app: APP,
     }
 }
 
