@@ -109,7 +109,7 @@ export async function importData(from?: Date, to?: Date) {
         })),
     ].filter(t => {
         if(!t) return false;
-        if(t.created_at.getTime() < store.last_treatment_at) return false;
+        if(t.created_at.getTime() <= store.last_treatment_at) return false;
         return true;
     });
 
