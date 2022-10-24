@@ -71,7 +71,7 @@ export async function importData(from?: Date, to?: Date) {
     const treatments = [
         ...basal.map((basal) => ({
             eventType: "Temp Basal",
-            duration: basal.value ? 30 : 300,
+            duration: 90,
             absolute: basal.value,
             enteredBy: APP,
             created_at: new Date(basal.created_at),
