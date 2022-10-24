@@ -71,11 +71,11 @@ export async function importData(from?: Date, to?: Date) {
     const treatments = [
         ...basal.map((basal) => ({
             eventType: "Temp Basal",
-            duration: 30,
+            duration: basal.value ? 30 : undefined,
             absolute: basal.value,
             enteredBy: APP,
             created_at: new Date(basal.created_at),
-        })).filter(t => t.created_at.getTime() > store.last_treatment_at),
+        })),
         ...bolus.map((bolus) => {
             //find combined boluses : Bolus type ezcarb
             const is_combined = bolus.flags.some(f => f.description === "Bolus type ezcarb");
